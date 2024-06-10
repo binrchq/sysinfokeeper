@@ -1,7 +1,8 @@
 package cli
 
 import (
-	"bitrec.ai/dialmainer/core/serve"
+	"bitrec.ai/systemkeeper/core/serve"
+
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )

@@ -1,7 +1,8 @@
 package cli
 
 import (
-	"bitrec.ai/dialmainer/core/constants"
+	"bitrec.ai/systemkeeper/core/constants"
+
 	"github.com/spf13/cobra"
 )
 

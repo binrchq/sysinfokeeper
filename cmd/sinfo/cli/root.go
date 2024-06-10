@@ -6,9 +6,11 @@ import (
 	"os"
 	"runtime"
 
-	"bitrec.ai/dialmainer/configs"
-	"bitrec.ai/dialmainer/core/constants"
-	"bitrec.ai/dialmainer/core/global"
+	"bitrec.ai/systemkeeper/core/beforehand"
+	"bitrec.ai/systemkeeper/core/constants"
+	"bitrec.ai/systemkeeper/core/omni"
+
+	"bitrec.ai/systemkeeper/configs"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -24,12 +26,15 @@ func init() {
 		return
 	}
 	cobra.OnInitialize(loadConfig)
+	rootCmd.PersistentFlags().StringArrayP("target", "t", []string{}, "Target of System Information. Empty for all, 'cpu','gpu','memory', 'disk', 'network','mainboard','sensor','aduio','battery','usb','bluetooth','motherboard','process'")
 	rootCmd.PersistentFlags().
 		StringVarP(&cfgFile, "config", "c", "", "config file (default is /etc/dialer/config.toml)")
 	rootCmd.PersistentFlags().
 		StringP("output", "o", "", "Output format. Empty for human-readable,'toml', 'json', 'json-line' or 'yaml'")
+	rootCmd.PersistentFlags().StringP("level", "l", "", "Output infomation level(3). Empty for basic, 'basic'.(1),'advanced'.(2),'full'.(3)")
 	rootCmd.PersistentFlags().
 		Bool("force", false, "Disable prompts and forces the execution")
+	rootCmd.Flags().SortFlags = false
 }
 
 func loadConfig() {
@@ -37,7 +42,7 @@ func loadConfig() {
 		cfgFile = os.Getenv("DIALER_CONFIG")
 
 	}
-	if cfgFile == "" && global.Mode == "dev" {
+	if cfgFile == "" && omni.Mode == "dev" {
 		cfgFile = constants.DEV_CONFIG_FILE
 	}
 	if cfgFile != "" {
@@ -50,7 +55,7 @@ func loadConfig() {
 	}
 	machineOutput := HasMachineOutputFlag()
 
-	logLevel, err := zerolog.ParseLevel(global.Config.Log.Level)
+	logLevel, err := zerolog.ParseLevel(omni.Config.Log.Level)
 	if err != nil {
 		logLevel = zerolog.DebugLevel
 	}
@@ -62,12 +67,13 @@ func loadConfig() {
 		zerolog.SetGlobalLevel(zerolog.Disabled)
 	}
 
-	if global.Config.Log.Format == constants.JSONLogFormat {
+	if omni.Config.Log.Format == constants.JSONLogFormat {
 		log.Logger = log.Output(os.Stdout)
 	}
-	if runtime.GOOS != "linux" && runtime.GOOS != "darwin" {
-		log.Fatal().Caller().Err(errors.New("os not support")).Msgf("dialer only support linux and darwin")
+	if runtime.GOOS != "linux" && runtime.GOOS != "darwin" && runtime.GOOS != "unix" {
+		log.Fatal().Caller().Err(errors.New("os not support")).Msgf("dialer only support linux/unix and darwin")
 	}
+
 }
 func readCfg(cfgPath string) error {
 	v := viper.New()
@@ -81,17 +87,18 @@ func readCfg(cfgPath string) error {
 		log.Fatal().Caller().Err(err).Msgf("Fatal error config file: Unmarshal failed")
 		return err
 	}
-	global.Config = conf
+	omni.Config = conf
 	return nil
 }
 
 var rootCmd = &cobra.Command{
-	Use:   "dialer",
-	Short: "dialer - a Dial pppoe and Static fixed ip control server",
+	Use:   "sinfo",
+	Short: "sinfo - a system information tool and keeper",
 	Long: `
-dialer - a CDN service that provides PPPoE and static fixed IP control for servers
+sinfo - a system information tool and keeper in the Linux/Unix system, can view hardware process network information, etc. 
 
-https://git.c.bitrec.ai/bitrec/dialmainer`,
+https://dl.bitrec.ai/app/sinfo`, //在类Unix系统的系统信息获取工具和信息守护工具，可以查看硬件信息，进程信息，网络信息等
+	Run: masterCmd,
 }
 
 func Execute() {
@@ -99,4 +106,23 @@ func Execute() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+}
+
+func masterCmd(cmd *cobra.Command, args []string) {
+	targets, _ := cmd.Flags().GetStringArray("target")
+	output, _ := cmd.Flags().GetString("output")
+	beforeRun() // before hand
+
+	fmt.Println(targets)
+	SuccessOutput(map[string]string{"version": constants.VERSION}, constants.VERSION, output)
+}
+
+func beforeRun() {
+	beforehand.SetPath()
+	beforehand.SetUserPaths()
+	beforehand.SetBasics()
+	beforehand.SetSystemFiles()
+	beforehand.SetOS()
+	beforehand.NewBlueprint().Set(false)
+	beforehand.SetDisplaySize()
 }

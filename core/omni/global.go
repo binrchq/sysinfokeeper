@@ -1,9 +1,9 @@
-package global
+package omni
 
 import (
-	"os"
+	operationsys "os"
 
-	"bitrec.ai/dialmainer/configs"
+	"bitrec.ai/systemkeeper/configs"
 
 	"github.com/shirou/gopsutil/process"
 	"gorm.io/gorm"
@@ -17,7 +17,7 @@ var (
 )
 
 func init() {
-	p, err := process.NewProcess(int32(os.Getpid()))
+	p, err := process.NewProcess(int32(operationsys.Getpid()))
 	if err != nil {
 		panic(err)
 	}

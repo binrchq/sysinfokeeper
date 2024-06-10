@@ -11,7 +11,7 @@ all: build push
 
 build:
 	@echo "Building $(APP_NAME) $(VERSION) for $(ARCH)..."
-	@./build/build-appimage.sh $(VERSION) $(ARCH)
+	@./tools/build-appimage.sh $(VERSION) $(ARCH)
 
 push:
 	@echo "Pushing $(APP_NAME)-$(VERSION)-$(ARCH).AppImage to MinIO..."

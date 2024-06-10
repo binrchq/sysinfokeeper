@@ -5,9 +5,10 @@ import (
 	"strings"
 	"time"
 
-	"bitrec.ai/dialmainer/cmd/dialer/cli"
+	"bitrec.ai/systemkeeper/cmd/sinfo/cli"
 
-	"bitrec.ai/dialmainer/core/global"
+	"bitrec.ai/systemkeeper/core/omni"
+
 	"github.com/jagottsicher/termcolor"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -28,9 +29,9 @@ func main() {
 		colors = false
 	}
 
-	global.Mode = "release"
+	omni.Mode = "release"
 	if len(os.Args) > 1 && strings.Contains(os.Args[0], "go") {
-		global.Mode = "dev"
+		omni.Mode = "dev"
 	}
 
 	if _, noColorIsSet := os.LookupEnv("NO_COLOR"); noColorIsSet {

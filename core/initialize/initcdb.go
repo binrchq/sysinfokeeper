@@ -7,8 +7,8 @@ import (
 	"reflect"
 	"strings"
 
-	"bitrec.ai/dialmainer/core/constants"
-	"bitrec.ai/dialmainer/core/model"
+	"bitrec.ai/systemkeeper/core/constants"
+
 	"github.com/rs/zerolog/log"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/sqlite"
@@ -35,9 +35,9 @@ func InitCDB() (*gorm.DB, error) {
 		return nil, err
 	}
 
-	if err := migrateTables(db, &model.PPPConfig{}); err != nil {
-		return nil, err
-	}
+	// if err := migrateTables(db, &model.Cpu{}); err != nil {
+	// 	return nil, err
+	// }
 
 	cdb = db
 	return cdb, nil
