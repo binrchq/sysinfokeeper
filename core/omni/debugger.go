@@ -35,6 +35,6 @@ func init() {
 	t3 = 3
 
 	// Initializing and using the debugger map
-	debugger["sys"] = 1
-	client["test-konvi"] = 0
+	// debugger["sys"] = 1
+	// client["test-konvi"] = 0
 }

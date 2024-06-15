@@ -1,6 +1,10 @@
 package beforehand
 
-import "os"
+import (
+	"os"
+
+	"bitrec.ai/systemkeeper/core/omni"
+)
 
 var (
 	OMNISystemFiles = map[string]string{}
@@ -32,4 +36,6 @@ func SetSystemFiles() {
 			OMNISystemFiles[key] = "" // 或者你可以选择忽略不存在的文件
 		}
 	}
+
+	omni.SystemFiles = OMNISystemFiles
 }

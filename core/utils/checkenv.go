@@ -11,14 +11,6 @@ func CheckCMD(cmd string) error {
 	return err
 }
 
-func checkProgram(prog string) string {
-	_, err := exec.LookPath(prog)
-	if err != nil {
-		return ""
-	}
-	return prog
-}
-
 func CheckProgram(name string) bool {
 	_, err := exec.LookPath(name)
 	return err == nil

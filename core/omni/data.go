@@ -31,7 +31,7 @@ var (
 	serviceTool    map[string]string
 	show           map[string]string
 	sysctl         map[string]string
-	systemFiles    map[string]string
+	SystemFiles    map[string]string
 	usb            map[string]string
 	windows        map[string]string
 )
