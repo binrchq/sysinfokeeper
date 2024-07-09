@@ -88,17 +88,14 @@ func (c *Cpu) GetCpuInfo(filepath string) ([]map[string]string, error) {
 				blockID++
 				continue
 			}
-
 			if key == "Processor" {
 				key = "model name"
 			} else {
 				key = lowerKey
 			}
-
 			if len(cpuinfo) <= blockID {
 				cpuinfo = append(cpuinfo, make(map[string]string))
 			}
-
 			cpuinfo[blockID][key] = value
 		} else {
 			if _, exists := cpuinfoMachine[lowerKey]; !exists {

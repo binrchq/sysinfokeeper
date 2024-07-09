@@ -1,14 +1,5 @@
 package omni
 
-// Self data
-var (
-	fakeDataDir    string
-	selfPath       string
-	userConfigDir  string
-	userConfigFile string
-	userDataDir    string
-)
-
 // Hashes
 var (
 	alerts         map[string]string
@@ -32,23 +23,24 @@ var (
 	show           map[string]string
 	sysctl         map[string]string
 	SystemFiles    map[string]string
+	DmidecodeCmd   map[string]string
 	usb            map[string]string
 	windows        map[string]string
 )
 
-// System Arrays
-var (
-	cpuinfo        []string
-	dmi            []string
-	ifs            []string
-	ifsBsd         []string
-	paths          []string
-	psAux          []string
-	psCmd          []string
-	sensorsExclude []string
-	sensorsUse     []string
-	uname          []string
-)
+// // System Arrays
+// var (
+// 	cpuinfo        []string
+// 	dmi            []string
+// 	ifs            []string
+// 	ifsBsd         []string
+// 	paths          []string
+// 	psAux          []string
+// 	psCmd          []string
+// 	sensorsExclude []string
+// 	sensorsUse     []string
+// 	uname          []string
+// )
 
 // Disk/Logical/Partition/RAID arrays
 var (
@@ -66,41 +58,4 @@ var (
 	swaps          []string
 	uuids          []string
 	zfsRaid        []string
-)
-
-// Booleans
-var (
-	bAdmin   bool
-	bAndroid bool
-	bDisplay bool
-	bIrc     bool
-	bRoot    bool
-)
-
-// System
-var (
-	bsdType       string = ""
-	deviceVm      string = ""
-	language      string = ""
-	os            string = ""
-	pciTool       string = ""
-	wanUrl        string
-	bitsSys       string
-	cpuArch       string
-	ppid          int
-	cpuSleep      float64 = 0.35
-	dlTimeout     int     = 4
-	limit         int     = 10
-	psCount       int     = 5
-	sensorsCpuNu  int     = 0
-	weatherSource int     = 100
-	weatherUnit   string  = "mi"
-)
-
-// Tools
-var (
-	display    string
-	ftpAlt     string
-	displayOpt string
-	sudoAs     string
 )

@@ -28,7 +28,7 @@ func init() {
 	cobra.OnInitialize(loadConfig)
 	rootCmd.PersistentFlags().StringArrayP("target", "t", []string{}, "Target of System Information. Empty for all, 'cpu','gpu','memory', 'disk', 'network','mainboard','sensor','aduio','battery','usb','bluetooth','motherboard','process'")
 	rootCmd.PersistentFlags().
-		StringVarP(&cfgFile, "config", "c", "", "config file (default is /etc/dialer/config.toml)")
+		StringVarP(&cfgFile, "config", "c", "", "config file (default is /etc/sinfo/config.toml)")
 	rootCmd.PersistentFlags().
 		StringP("output", "o", "", "Output format. Empty for human-readable,'toml', 'json', 'json-line' or 'yaml'")
 	rootCmd.PersistentFlags().StringP("level", "l", "", "Output infomation level(3). Empty for basic, 'basic'.(1),'advanced'.(2),'full'.(3)")
@@ -122,6 +122,7 @@ func beforeRun() {
 	beforehand.SetUserPaths()
 	beforehand.SetBasics()
 	beforehand.SetSystemFiles()
+	beforehand.SetDmidecodeCmd()
 	beforehand.SetOS()
 	beforehand.NewBlueprint().Set(false)
 	beforehand.SetDisplaySize()

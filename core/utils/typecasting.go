@@ -1,6 +1,9 @@
 package utils
 
-import "strconv"
+import (
+	"strconv"
+	"unicode"
+)
 
 func BoolToInt(b bool) int {
 	if b {
@@ -35,4 +38,14 @@ func ToFloat(val string) (float64, bool) {
 		return 0, false
 	}
 	return f, true
+}
+
+func ExtractInt(s string) (int, error) {
+	var numStr string
+	for _, r := range s {
+		if unicode.IsDigit(r) {
+			numStr += string(r)
+		}
+	}
+	return strconv.Atoi(numStr)
 }
