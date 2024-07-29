@@ -5,6 +5,8 @@ import (
 	"strings"
 	"syscall"
 	"unsafe"
+
+	"github.com/rs/zerolog/log"
 )
 
 const SYS_PLEDGE = 108
@@ -25,10 +27,10 @@ func init() {
 		// Perform the pledge
 		err = pledge(strings.Join(pledges, " "), "")
 		if err != nil {
+			
+			log.Warn().Err(err).Msg("pledge failed")
 			fmt.Printf("pledge failed: %v\n", err)
-		} else {
-			fmt.Println("pledge succeeded")
-		}
+		} 
 	} else {
 		fmt.Println("pledge is not available")
 	}

@@ -83,5 +83,5 @@ func SetUserPaths() {
 	logFile = filepath.Join(userDataDir, selfName+".log")
 
 	// Print debug information
-	fmt.Printf("scd: %s sdd: %s\n", userConfigDir, userDataDir)
+	// fmt.Printf("scd: %s sdd: %s\n", userConfigDir, userDataDir)
 }

@@ -19,7 +19,7 @@ func NewRam() *Ram {
 func (c *Ram) Get() (memoryModel *model.MemoryModel, err error) {
 	meminfo, err := c.GetRamInfo(omni.SystemFiles["proc-meminfo"])
 	if err != nil {
-		log.Error().Err(err).Msg("Error getting Memory info")
+		log.Warn().Err(err).Msg("Error getting Memory info")
 	}
 	memoryModel = model.NewMemory()
 	memoryModel.Total = meminfo["memtotal"]
@@ -28,14 +28,13 @@ func (c *Ram) Get() (memoryModel *model.MemoryModel, err error) {
 	memoryModel.SystemRam = meminfo["memtotal"] + meminfo["swaptotal"]
 	memModule, err := c.GetRamModuleInfo(omni.DmidecodeCmd["dmidecode-memory"])
 	if err != nil {
-		log.Error().Err(err).Msg("Error getting Memory info")
+		log.Warn().Err(err).Msg("Error getting Memory info")
 		return
 
 	}
 	keyTestsPart := []string{"maximum capacity"}
 	keyTestsModule := []string{"size", "locator", "type", "part number", "manufacturer", "serial number"}
 	Installed := 0
-	utils.DebugPrintDetails(memModule)
 	for _, sonPart := range memModule {
 		isPart := utils.ContainsAll(sonPart.keys(), keyTestsPart)
 		isModule := utils.ContainsAll(sonPart.keys(), keyTestsModule)
@@ -70,7 +69,7 @@ func (c *Ram) Get() (memoryModel *model.MemoryModel, err error) {
 	}
 	gb, err := utils.ExtractInt(memoryModel.PartCapacity)
 	if err != nil {
-		log.Error().Err(err).Msg("Error getting Memory info")
+		log.Warn().Err(err).Msg("Error getting Memory info")
 		return
 	}
 	memoryModel.Capacity = fmt.Sprintf("%dGB", gb*memoryModel.PartNumber)
@@ -123,7 +122,7 @@ func (m MemModuleInfo) keys() []string {
 func (c *Ram) GetRamModuleInfo(cmd string) ([]MemModuleInfo, error) {
 	raw, err := utils.CmdReader(cmd, false, "arr")
 	if err != nil {
-		log.Error().Err(err).Msg("Error getting Memory infos")
+		log.Warn().Err(err).Msg("Error getting Memory infos")
 		return nil, err
 	}
 

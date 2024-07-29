@@ -19,18 +19,18 @@ func NewCpu() *Cpu {
 func (c *Cpu) Get() (*model.CpuModel, error) {
 	cpuinfo, err := c.GetCpuInfo(omni.SystemFiles["proc-cpuinfo"])
 	if err != nil {
-		log.Error().Err(err).Msg("Error getting CPU info")
+		log.Warn().Err(err).Msg("Error getting CPU info")
 	}
 	cpuModel := model.NewCpu()
 	for coreId, cpuCore := range cpuinfo {
 		avgSpeed, err := strconv.ParseFloat(cpuCore["cpu mhz"], 64)
 		if err != nil {
-			log.Error().Err(err).Msg("Error getting CPU info")
+			log.Warn().Err(err).Msg("Error getting CPU info")
 		}
 		if physical, exists := cpuCore["physical id"]; exists {
 			cores, err := strconv.Atoi(cpuCore["cpu cores"])
 			if err != nil {
-				log.Error().Err(err).Msg("Error getting CPU info")
+				log.Warn().Err(err).Msg("Error getting CPU info")
 			}
 			bits := 32
 			if utils.Is64Bit(cpuCore["flags"]) {
@@ -38,7 +38,7 @@ func (c *Cpu) Get() (*model.CpuModel, error) {
 			}
 			physicalId, err := strconv.Atoi(physical)
 			if err != nil {
-				log.Error().Err(err).Msg("Error getting CPU info")
+				log.Warn().Err(err).Msg("Error getting CPU info")
 			}
 			if len(cpuModel.CpuInfos) <= physicalId {
 				cpuModel.CpuInfos = append(cpuModel.CpuInfos, model.CpuInfo{ModelName: cpuCore["model name"], Cores: cores, Bits: bits, Type: "", Cache: "", MinMax: "", Flags: strings.Fields(cpuCore["flags"]), AvgSpeed: avgSpeed})
