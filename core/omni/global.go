@@ -3,7 +3,7 @@ package omni
 import (
 	operationsys "os"
 
-	"bitrec.ai/systemkeeper/configs"
+	"binrc.com/sysinfokeeper/configs"
 
 	"github.com/shirou/gopsutil/process"
 	"gorm.io/gorm"

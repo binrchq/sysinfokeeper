@@ -3,36 +3,52 @@ package packages
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
-	"time"
 
-	"bitrec.ai/systemkeeper/core/model"
+	"binrc.com/sysinfokeeper/core/model"
 )
 
-type Disk struct{}
+type Disk struct {
+	speedTestMode string
+}
+
+type SpeedTestMode string
+
+const (
+	SpeedTestNone SpeedTestMode = "none"
+	SpeedTestLow  SpeedTestMode = "low"
+	SpeedTestHigh SpeedTestMode = "high"
+)
 
 func NewDisk() *Disk {
-	return &Disk{}
+	return &Disk{
+		speedTestMode: string(SpeedTestLow),
+	}
+}
+
+func (d *Disk) SetSpeedTestMode(mode string) {
+	d.speedTestMode = mode
 }
 
 func (d *Disk) Get() (diskModel *model.DiskModel, err error) {
 	diskModel = model.NewDiskModel()
-	err = populateDiskInfo(diskModel)
+	err = populateDiskInfo(diskModel, d.speedTestMode)
 	if err != nil {
 		return nil, err
 	}
 	return diskModel, nil
 }
 
-func populateDiskInfo(dm *model.DiskModel) error {
+func populateDiskInfo(dm *model.DiskModel, speedTestMode string) error {
 	err := gatherLsblkInfo(dm)
 	if err != nil {
 		return err
 	}
 
-	err = gatherDDInfo(dm)
+	err = gatherDDInfo(dm, speedTestMode)
 	if err != nil {
 		return err
 	}
@@ -65,10 +81,26 @@ type BlockDevice struct {
 }
 
 func gatherLsblkInfo(dm *model.DiskModel) error {
+	if supportsLsblkJson() {
+		return gatherFromLsblkJSON(dm)
+	}
+	return gatherFromLsblkText(dm)
+}
+
+func supportsLsblkJson() bool {
+	out, err := exec.Command("lsblk", "--help").CombinedOutput()
+	if err != nil {
+		return false
+	}
+	return strings.Contains(string(out), "-J")
+}
+
+// gatherLsblkInfo 函数用于获取磁盘信息
+func gatherFromLsblkJSON(dm *model.DiskModel) error {
 	lsblkCmd := exec.Command("lsblk", "-J", "-o", "NAME,TYPE,SIZE,FSUSED,MOUNTPOINT,MODEL,SERIAL,VENDOR,REV,ROTA")
 	lsblkOutput, err := lsblkCmd.Output()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to run lsblk -J: %v", err)
 	}
 
 	var lsblkData struct {
@@ -77,11 +109,15 @@ func gatherLsblkInfo(dm *model.DiskModel) error {
 
 	err = json.Unmarshal(lsblkOutput, &lsblkData)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to parse lsblk output: %v", err)
 	}
 
 	for _, device := range lsblkData.BlockDevices {
-		if device.Type == "disk" {
+		// Only process real disks, skip loop devices and other virtual devices
+		if device.Type == "disk" && isValidDisk(device.Name) {
+			if size, err := parseSize(device.Size); err != nil || size == 0 {
+				continue
+			}
 			diskInfo := parseBlockDevice(device)
 			dm.DiskInfos = append(dm.DiskInfos, diskInfo)
 		}
@@ -112,12 +148,113 @@ func gatherLsblkInfo(dm *model.DiskModel) error {
 
 	return nil
 }
+func gatherFromLsblkText(dm *model.DiskModel) error {
+	fields := "NAME,TYPE,SIZE,MOUNTPOINT,MODEL,SERIAL,VENDOR,REV,ROTA"
+	cmd := exec.Command("lsblk", "-o", fields)
+	output, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("failed to run lsblk -o: %v", err)
+	}
+
+	lines := strings.Split(string(output), "\n")
+	if len(lines) < 2 {
+		return fmt.Errorf("unexpected lsblk output")
+	}
+	// 获取字段位置索引
+	header := parseColumns(lines[0])
+	for _, line := range lines[1:] {
+		cols := parseColumns(line)
+		if len(cols) < len(header) {
+			continue
+		}
+
+		device := mapColumnsToValues(header, cols)
+		if device["TYPE"] != "disk" || !isValidDisk(device["NAME"]) {
+			continue
+		}
+
+		if size, err := parseSize(device["SIZE"]); err != nil || size == 0 {
+			continue
+		}
+		rota := device["ROTA"] == "1"
+
+		disk := BlockDevice{
+			Name:       device["NAME"],
+			Type:       device["TYPE"],
+			Size:       device["SIZE"],
+			MountPoint: device["MOUNTPOINT"],
+			Model:      device["MODEL"],
+			Serial:     device["SERIAL"],
+			Vendor:     device["VENDOR"],
+			Rev:        device["REV"],
+			Rota:       rota,
+		}
+		diskInfo := parseBlockDevice(disk)
+		dm.DiskInfos = append(dm.DiskInfos, diskInfo)
+
+	}
+
+	// 总量计算
+	var totalSize, usedSize float64
+	for _, disk := range dm.DiskInfos {
+		if disk.Size != "" {
+			if size, err := parseSize(disk.Size); err == nil {
+				totalSize += size
+			}
+		}
+		if disk.Usage != "" {
+			usedSize += parseUsage(disk.Usage)
+		}
+	}
+	dm.Total = formatSize(totalSize)
+	dm.Used = formatSize(usedSize)
+	dm.Available = formatSize(totalSize - usedSize)
+
+	return nil
+}
+func parseColumns(line string) []string {
+	return strings.Fields(line)
+}
+
+func mapColumnsToValues(headers, values []string) map[string]string {
+	result := make(map[string]string)
+	for i := 0; i < len(headers) && i < len(values); i++ {
+		result[headers[i]] = values[i]
+	}
+	return result
+}
+
+var ignorePrefixes = []string{
+	"loop", "ram", "nbd", "dm-", "fd", "sr", "zd", "rbd", "md",
+}
+
+func hasIgnorePrefix(dev string) bool {
+	for _, prefix := range ignorePrefixes {
+		if strings.HasPrefix(dev, prefix) {
+			return true
+		}
+	}
+	return false
+}
+func hasDeviceEntry(dev string) bool {
+	_, err := os.Stat("/sys/block/" + dev + "/device")
+	return err == nil
+}
+func isValidDisk(dev string) bool {
+	if hasIgnorePrefix(dev) {
+		return false
+	}
+	if !hasDeviceEntry(dev) {
+		return false
+	}
+	return true
+}
 
 func parseBlockDevice(device BlockDevice) model.DiskInfo {
 	mountPoints := gatherMountPoints(device)
 	sysSymbol := "no"
 	for _, mp := range mountPoints {
-		if strings.Contains(mp, "/boot") || strings.Contains(mp, "/") {
+		if mp == "/" || strings.Contains(mp, "/boot") {
 			sysSymbol = "yes"
 			break
 		}
@@ -217,7 +354,11 @@ func gatherSmartctlInfo(dm *model.DiskModel) error {
 		smartctlCmd := exec.Command("smartctl", "-a", "/dev/"+disk.Device)
 		smartctlOutput, err := smartctlCmd.Output()
 		if err != nil {
-			return err
+			// smartctl 可能因为权限问题或设备不支持而失败，继续处理其他磁盘
+			// 设置默认值，不中断整个流程
+			dm.DiskInfos[i].Health = "unknown"
+			dm.DiskInfos[i].BadBlocks = 0
+			continue
 		}
 
 		lines := strings.Split(string(smartctlOutput), "\n")
@@ -226,7 +367,9 @@ func gatherSmartctlInfo(dm *model.DiskModel) error {
 				fields := strings.FieldsFunc(line, func(r rune) bool {
 					return r == ':'
 				})
-				dm.DiskInfos[i].Manufacturer = strings.TrimSpace(fields[len(fields)-1])
+				if len(fields) > 1 {
+					dm.DiskInfos[i].Manufacturer = strings.TrimSpace(fields[len(fields)-1])
+				}
 			}
 		}
 		// Parse smartctlOutput to find health status and bad sectors
@@ -243,22 +386,65 @@ func gatherUdevadmInfo(dm *model.DiskModel) error {
 		udevadmCmd := exec.Command("udevadm", "info", "--query=all", "--name=/dev/"+disk.Device)
 		udevadmOutput, err := udevadmCmd.Output()
 		if err != nil {
-			return err
+			// If udevadm fails, try to determine type from other sources
+			dm.DiskInfos[i].Type = determineDiskTypeFromModel(disk.ModelName, disk.Device)
+			continue
 		}
 
 		udevadmInfo := string(udevadmOutput)
-		if strings.Contains(udevadmInfo, "ID_BUS=scsi") && strings.Contains(udevadmInfo, "ID_SCSI_TYPE=disk") {
-			dm.DiskInfos[i].Type = "sas"
+
+		// Check for NVMe first
+		if strings.Contains(disk.Device, "nvme") || strings.Contains(udevadmInfo, "ID_BUS=nvme") {
+			dm.DiskInfos[i].Type = "nvme"
+		} else if strings.Contains(udevadmInfo, "ID_BUS=scsi") && strings.Contains(udevadmInfo, "ID_SCSI_TYPE=disk") {
+			// Check rotation rate for SAS disks
+			if strings.Contains(udevadmInfo, "ID_ATA_ROTATION_RATE_RPM=0") {
+				dm.DiskInfos[i].Type = "ssd"
+			} else {
+				dm.DiskInfos[i].Type = "sas"
+			}
 		} else if strings.Contains(udevadmInfo, "ID_ATA_ROTATION_RATE_RPM=0") {
 			dm.DiskInfos[i].Type = "ssd"
-		} else if strings.Contains(disk.Device, "nvme") {
-			dm.DiskInfos[i].Type = "nvme"
-		} else {
+		} else if strings.Contains(udevadmInfo, "ID_ATA_ROTATION_RATE_RPM") {
+			// Has rotation rate, it's an HDD
 			dm.DiskInfos[i].Type = "hdd"
+		} else {
+			// Fallback: try to determine from model name
+			dm.DiskInfos[i].Type = determineDiskTypeFromModel(disk.ModelName, disk.Device)
 		}
 	}
 
 	return nil
+}
+
+// determineDiskTypeFromModel tries to determine disk type from model name
+func determineDiskTypeFromModel(modelName, device string) string {
+	modelLower := strings.ToLower(modelName)
+	deviceLower := strings.ToLower(device)
+
+	// Check for NVMe
+	if strings.Contains(deviceLower, "nvme") {
+		return "nvme"
+	}
+
+	// Check for SSD indicators in model name
+	ssdIndicators := []string{"ssd", "m.2", "nvme", "solid state", "flash", "micron", "samsung", "crucial"}
+	for _, indicator := range ssdIndicators {
+		if strings.Contains(modelLower, indicator) {
+			return "ssd"
+		}
+	}
+
+	// Check for HDD indicators
+	hddIndicators := []string{"hdd", "hard disk", "wd", "seagate", "toshiba", "hitachi"}
+	for _, indicator := range hddIndicators {
+		if strings.Contains(modelLower, indicator) {
+			return "hdd"
+		}
+	}
+
+	// Default to hdd if uncertain
+	return "hdd"
 }
 
 func parseSmartctlOutput(output string) (string, int) {
@@ -287,50 +473,125 @@ func parseSmartctlOutput(output string) (string, int) {
 
 	return healthStatus, badBlocksCount
 }
-func gatherDDInfo(dm *model.DiskModel) error {
+
+func gatherDDInfo(dm *model.DiskModel, speedTestMode string) error {
+	if speedTestMode == string(SpeedTestNone) {
+		for i := range dm.DiskInfos {
+			dm.DiskInfos[i].ReadSpeed = "N/A"
+			dm.DiskInfos[i].WriteSpeed = "N/A"
+		}
+		return nil
+	}
+
+	var blockSize string
+	var count int
+
+	switch speedTestMode {
+	case string(SpeedTestHigh):
+		blockSize = "1M"
+		count = 1024
+	case string(SpeedTestLow):
+		fallthrough
+	default:
+		blockSize = "512K"
+		count = 20
+	}
+
 	for i := range dm.DiskInfos {
 		disk := &dm.DiskInfos[i]
-		filePath := fmt.Sprintf("/dev/%s", disk.Device)
-		blockSize := "1M"
-		count := 300
-		duration := 1 * time.Second
 
-		writeSpeed, readSpeed, err := DiskSpeedTest(filePath, blockSize, count, duration)
+		if len(disk.MountPoint) == 0 {
+			disk.ReadSpeed = "N/A"
+			disk.WriteSpeed = "N/A"
+			continue
+		}
+
+		testMountPoint := findValidTestMountPoint(disk.MountPoint)
+		if testMountPoint == "" {
+			disk.ReadSpeed = "N/A"
+			disk.WriteSpeed = "N/A"
+			continue
+		}
+
+		testDir := fmt.Sprintf("%s/sinfo-tmp", testMountPoint)
+		if err := os.MkdirAll(testDir, 0755); err != nil {
+			disk.ReadSpeed = "N/A"
+			disk.WriteSpeed = "N/A"
+			continue
+		}
+
+		testFile := fmt.Sprintf("%s/.sinfo_dd.test-%s", testDir, disk.Device)
+
+		writeSpeed, readSpeed, err := DiskSpeedTest(testFile, blockSize, count)
 		if err != nil {
-			return err
+			disk.ReadSpeed = "N/A"
+			disk.WriteSpeed = "N/A"
+			_ = os.RemoveAll(testDir)
+			continue
 		}
 
 		disk.ReadSpeed = readSpeed
 		disk.WriteSpeed = writeSpeed
+
+		_ = os.RemoveAll(testDir)
 	}
 	return nil
 }
 
-// DiskSpeedTest executes dd commands to test read and write speeds
-func DiskSpeedTest(disk string, blockSize string, count int, duration time.Duration) (writeSpeed, readSpeed string, err error) {
-	// Measure write speed
-	writeCmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", disk), fmt.Sprintf("bs=%s", blockSize), fmt.Sprintf("count=%d", count), "oflag=direct", "status=progress")
+func findValidTestMountPoint(mountPoints []string) string {
+	for _, mp := range mountPoints {
+		if mp == "" {
+			continue
+		}
+		if isTmpfs(mp) {
+			continue
+		}
+		if info, err := os.Stat(mp); err == nil && info.IsDir() {
+			return mp
+		}
+	}
+	return ""
+}
+
+func isTmpfs(mountPoint string) bool {
+	cmd := exec.Command("findmnt", "-n", "-o", "FSTYPE", mountPoint)
+	output, err := cmd.Output()
+	if err != nil {
+		return false
+	}
+	fsType := strings.TrimSpace(string(output))
+	return fsType == "tmpfs" || fsType == "devtmpfs"
+}
+
+func DiskSpeedTest(filePath, blockSize string, count int) (writeSpeed, readSpeed string, err error) {
+	writeCmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filePath),
+		fmt.Sprintf("bs=%s", blockSize), fmt.Sprintf("count=%d", count),
+		"oflag=direct", "status=progress")
 	writeOutput, err := writeCmd.CombinedOutput()
 	if err != nil {
-		return "", "", fmt.Errorf("failed to execute write test: %w\nOutput: %s", err, writeOutput)
+		return "", "", fmt.Errorf("write test failed: %w\nOutput: %s", err, writeOutput)
 	}
 	writeSpeed = parseDDOutput(string(writeOutput))
 
-	// Measure read speed
-	readCmd := exec.Command("dd", fmt.Sprintf("if=%s", disk), "of=/dev/null", fmt.Sprintf("bs=%s", blockSize), fmt.Sprintf("count=%d", count), "iflag=direct", "status=progress")
+	readCmd := exec.Command("dd", fmt.Sprintf("if=%s", filePath), "of=/dev/null",
+		fmt.Sprintf("bs=%s", blockSize), fmt.Sprintf("count=%d", count),
+		"iflag=direct", "status=progress")
 	readOutput, err := readCmd.CombinedOutput()
 	if err != nil {
-		return "", "", fmt.Errorf("failed to execute read test: %w\nOutput: %s", err, readOutput)
+		return "", "", fmt.Errorf("read test failed: %w\nOutput: %s", err, readOutput)
 	}
 	readSpeed = parseDDOutput(string(readOutput))
+
 	return writeSpeed, readSpeed, nil
 }
 
-// parseDDOutput parses the dd command output to extract the speed
+// parseDDOutput 提取 dd 输出中的速度信息
 func parseDDOutput(output string) string {
 	lines := strings.Split(output, "\n")
 	for _, line := range lines {
-		if strings.Contains(line, "MB/s") || strings.Contains(line, "kB/s") || strings.Contains(line, "GB/s") {
+		if strings.Contains(line, "MB/s") || strings.Contains(line, "MiB/s") ||
+			strings.Contains(line, "kB/s") || strings.Contains(line, "KiB/s") ||
+			strings.Contains(line, "GB/s") || strings.Contains(line, "GiB/s") {
 			fields := strings.Fields(line)
 			if len(fields) > 1 {
 				return fields[len(fields)-2] + " " + fields[len(fields)-1]

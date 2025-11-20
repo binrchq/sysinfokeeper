@@ -4,7 +4,7 @@ import (
 	"os"
 	"strings"
 
-	"bitrec.ai/systemkeeper/core/utils"
+	"binrc.com/sysinfokeeper/core/utils"
 )
 
 // setPath function to construct a PATH-like string

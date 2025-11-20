@@ -5,9 +5,9 @@ import (
 	"strings"
 	"time"
 
-	"bitrec.ai/systemkeeper/cmd/sinfo/cli"
+	"binrc.com/sysinfokeeper/cmd/sinfo/cli"
 
-	"bitrec.ai/systemkeeper/core/omni"
+	"binrc.com/sysinfokeeper/core/omni"
 
 	"github.com/jagottsicher/termcolor"
 	"github.com/rs/zerolog"

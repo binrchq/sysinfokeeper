@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"bitrec.ai/systemkeeper/core/model"
-	"bitrec.ai/systemkeeper/core/omni"
-	"bitrec.ai/systemkeeper/core/utils"
+	"binrc.com/sysinfokeeper/core/model"
+	"binrc.com/sysinfokeeper/core/omni"
+	"binrc.com/sysinfokeeper/core/utils"
 	"github.com/rs/zerolog/log"
 )
 
@@ -58,9 +58,11 @@ func (c *Ram) Get() (memoryModel *model.MemoryModel, err error) {
 
 			memoryModel.Type = sonPart["type"]
 			memoryModule.Device = sonPart["bank locator"]
+			memoryModule.Type = sonPart["type"]
 			memoryModule.Size = sonPart["size"]
 			memoryModule.Speed = sonPart["speed"]
 			memoryModule.Slot = sonPart["locator"]
+			memoryModule.Rank = sonPart["rank"]
 			memoryModule.ModelName = sonPart["part number"]
 			memoryModule.SN = sonPart["serial number"]
 			memoryModule.Manufacturer = sonPart["manufacturer"]

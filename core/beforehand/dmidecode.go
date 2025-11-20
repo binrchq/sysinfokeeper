@@ -1,7 +1,7 @@
 package beforehand
 
 import (
-	"bitrec.ai/systemkeeper/core/omni"
+	"binrc.com/sysinfokeeper/core/omni"
 )
 
 var (

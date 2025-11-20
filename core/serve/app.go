@@ -12,6 +12,6 @@ func NewDialer() *Dialer {
 }
 
 func (s *Dialer) Serve() error {
-	//协程处理拨号任务
+	//协程处理任务
 	return errors.New("1")
 }

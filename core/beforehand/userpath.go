@@ -7,16 +7,16 @@ import (
 	"path/filepath"
 	"strings"
 
-	"bitrec.ai/systemkeeper/core/utils"
+	"binrc.com/sysinfokeeper/core/utils"
 )
 
 var (
 	// selfName      = "inxi"
-	selfPath      string
+	selfPath string
 	// userConfigDir string
-	userDataDir   string
+	userDataDir string
 	// fakeDataDir   string
-	logFile       string
+	logFile string
 )
 
 func SetUserPaths() {
@@ -62,7 +62,7 @@ func SetUserPaths() {
 	if !utils.DirExists(userDataDir) {
 		err := os.MkdirAll(userDataDir, os.ModePerm)
 		if err != nil {
-			fmt.Println("Error creating user data directory:", err) 
+			fmt.Println("Error creating user data directory:", err)
 			return
 		}
 	}

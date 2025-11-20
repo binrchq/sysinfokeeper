@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"strings"
 
-	"bitrec.ai/systemkeeper/core/utils"
+	"binrc.com/sysinfokeeper/core/utils"
 )
 
 var (

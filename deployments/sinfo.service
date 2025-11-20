@@ -1,11 +1,35 @@
 [Unit]
-Description=Sysinfo Keeper Service
-After=network.target
+Description=SysInfoKeeper Hardware Monitoring Service
+After=network-online.target
+Wants=network-online.target
+Documentation=https://github.com/binrchq/sysinfokeeper
 
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/sinfo
-Restart=always
+User=sysinfokeeper
+Group=sysinfokeeper
+WorkingDirectory=/var/lib/sysinfokeeper
+
+# Default values (can be overridden in /etc/sysinfokeeper.env)
+Environment=SINFO_INTERVAL=3600
+Environment=SINFO_RETENTION=30
+Environment=SINFO_SPEED_TEST=low
+EnvironmentFile=-/etc/sysinfokeeper.env
+
+ExecStart=/usr/local/bin/sinfo serve \
+  --interval $SINFO_INTERVAL \
+  --retention $SINFO_RETENTION \
+  --speed-test $SINFO_SPEED_TEST
+
+Restart=on-failure
+RestartSec=15
+SyslogIdentifier=sysinfokeeper
+StandardOutput=journal
+StandardError=journal
+
+# Ensure the application can write under /var/lib/sysinfokeeper
+StateDirectory=sysinfokeeper
+ReadWritePaths=/var/lib/sysinfokeeper
 
 [Install]
 WantedBy=multi-user.target

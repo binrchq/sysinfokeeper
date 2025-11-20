@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"bitrec.ai/systemkeeper/core/model"
+	"binrc.com/sysinfokeeper/core/model"
 )
 
 type Nic struct{}

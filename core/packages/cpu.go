@@ -1,18 +1,21 @@
 package packages
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
-	"bitrec.ai/systemkeeper/core/model"
-	"bitrec.ai/systemkeeper/core/omni"
-	"bitrec.ai/systemkeeper/core/utils"
+	"binrc.com/sysinfokeeper/core/model"
+	"binrc.com/sysinfokeeper/core/omni"
+	"binrc.com/sysinfokeeper/core/utils"
 	"github.com/rs/zerolog/log"
 )
 
 type Cpu struct{}
 
+// 创建一个新的Cpu实例
 func NewCpu() *Cpu {
+	// 返回一个指向Cpu实例的指针
 	return &Cpu{}
 }
 
@@ -41,7 +44,9 @@ func (c *Cpu) Get() (*model.CpuModel, error) {
 				log.Warn().Err(err).Msg("Error getting CPU info")
 			}
 			if len(cpuModel.CpuInfos) <= physicalId {
-				cpuModel.CpuInfos = append(cpuModel.CpuInfos, model.CpuInfo{ModelName: cpuCore["model name"], Cores: cores, Bits: bits, Type: "", Cache: "", MinMax: "", Flags: strings.Fields(cpuCore["flags"]), AvgSpeed: avgSpeed})
+				MaxSpeed, _ := c.GetBaseSpeed(fmt.Sprintf(omni.SystemFiles["device-cpufreq0max"], cpuCore["processor"]))
+				MinSpeed, _ := c.GetBaseSpeed(fmt.Sprintf(omni.SystemFiles["device-cpufreq0min"], cpuCore["processor"]))
+				cpuModel.CpuInfos = append(cpuModel.CpuInfos, model.CpuInfo{ModelName: cpuCore["model name"], Cores: cores, Bits: bits, Type: "", Cache: "", MaxSpeed: MaxSpeed, MinSpeed: MinSpeed, Flags: strings.Fields(cpuCore["flags"]), AvgSpeed: avgSpeed})
 			} else {
 				cpuModel.CpuInfos[physicalId].AvgSpeed = (cpuModel.CpuInfos[physicalId].AvgSpeed + avgSpeed) / 2
 			}
@@ -51,6 +56,21 @@ func (c *Cpu) Get() (*model.CpuModel, error) {
 		}
 	}
 	return cpuModel, nil
+}
+
+// 读取cpu的基础睿频信息
+func (c *Cpu) GetBaseSpeed(filepath string) (float64, error) {
+	raw, err := utils.Reader(filepath, false, nil)
+	if err != nil {
+		return -1, err
+	}
+	line := raw.([]string)[0]
+	Speed, err := strconv.ParseFloat(strings.TrimSpace(line), 64)
+
+	if err != nil {
+		return -1, err
+	}
+	return Speed, nil
 }
 
 func (c *Cpu) GetCpuInfo(filepath string) ([]map[string]string, error) {

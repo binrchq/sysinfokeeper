@@ -1,8 +1,8 @@
 package cli
 
 import (
-	"bitrec.ai/systemkeeper/core/constants"
-	"bitrec.ai/systemkeeper/core/utils"
+	"binrc.com/pkg/outformat"
+	"binrc.com/sysinfokeeper/core/constants"
 
 	"github.com/spf13/cobra"
 )
@@ -17,6 +17,6 @@ var listCmd = &cobra.Command{
 	Long:  "The dial info list of dialer.",
 	Run: func(cmd *cobra.Command, args []string) {
 		output, _ := cmd.Flags().GetString("output")
-		utils.SuccessOutput(map[string]string{"version": constants.VERSION}, constants.VERSION, output)
+		outformat.SuccessOutput(map[string]string{"version": constants.VERSION}, constants.VERSION, output)
 	},
 }

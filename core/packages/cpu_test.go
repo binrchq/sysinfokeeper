@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"bitrec.ai/systemkeeper/core/beforehand"
+	"binrc.com/sysinfokeeper/core/beforehand"
 )
 
 func TestGetCpuInfo(t *testing.T) {

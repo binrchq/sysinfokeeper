@@ -6,7 +6,7 @@ import (
 	"os/user"
 	"strings"
 
-	"bitrec.ai/systemkeeper/core/utils"
+	"binrc.com/sysinfokeeper/core/utils"
 )
 
 var (
