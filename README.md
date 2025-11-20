@@ -87,7 +87,7 @@ go run ./cmd/sinfo --target disk --target nic --level advanced
 ### Method 2 · Build a standalone binary
 
 ```bash
-go build binrc.com/sysinfokeeper/cmd/sinfo -o sinfo
+GO111MODULE=on go install binrc.com/sysinfokeeper/cmd/sinfo@latest
 ./sinfo --output table
 ```
 

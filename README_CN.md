@@ -87,7 +87,7 @@ go run ./cmd/sinfo --target disk --target nic --level advanced
 ### 方式二 · 构建独立二进制
 
 ```bash
-go build binrc.com/sysinfokeeper/cmd/sinfo -o sinfo
+GO111MODULE=on go install binrc.com/sysinfokeeper/cmd/sinfo@latest
 ./sinfo --output table
 ```
 
