@@ -24,9 +24,6 @@ mkdir -p $OUTPUT_DIR/AppDir/usr/local/bin
 echo "Building $APP_NAME $VERSION..."
 env GOOS=linux GOARCH=$ARCH go build -o $OUTPUT_DIR/AppDir/usr/local/bin/$APP_NAME
 
-# 复制配置文件
-cp configs/comfig.toml $OUTPUT_DIR/AppDir/etc/sysinfokeeper/config
-
 # 复制服务文件
 cp deployments/$APP_NAME.service $OUTPUT_DIR/AppDir/etc/systemd/system/$APP_NAME.service
 
